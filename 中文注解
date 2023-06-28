@@ -1,0 +1,56 @@
+# 导入streamlit库，用于创建和运行web应用
+import streamlit as st
+# 导入openai库，用于调用OpenAI的API
+import openai
+
+# 从Streamlit的秘密管理器中获取OpenAI的API密钥，并设置为openai的API密钥
+openai.api_key = st.secrets["api_key"]
+
+# 在web应用的页面上设置标题为"ChatGPT Plus DALL-E"
+st.title("ChatGPT Plus DALL-E")
+
+# 创建一个表单，其标识为"form"
+with st.form("form"):
+    # 创建一个文本输入框，用户可以在其中输入提示
+    user_input = st.text_input("Prompt")
+    # 创建一个下拉选择框，用户可以在其中选择图像的大小
+    size = st.selectbox("Size", ["1024x1024", "512x512", "256x256"])
+    # 创建一个提交按钮，当用户点击时，表单会被提交
+    submit = st.form_submit_button("Submit")
+
+# 当表单被提交且用户的输入不为空时
+if submit and user_input:
+    # 创建一个GPT-3的提示，这个提示是一个包含一个字典的列表，字典的内容是一条系统消息
+    gpt_prompt = [{
+        "role": "system",
+        "content": "Imagine the detail appearance of the input. Response it shortly around 20 words"
+    }]
+
+    # 在GPT-3的提示中添加一条用户消息，其内容是用户的输入
+    gpt_prompt.append({
+        "role": "user",
+        "content": user_input
+    })
+
+    # 显示一个等待的消息，提示用户正在等待GPT-3的响应
+    with st.spinner("Waiting for ChatGPT..."):
+        # 调用OpenAI的API，创建一个聊天完成任务，模型是"gpt-3.5-turbo"，消息是刚才创建的GPT-3的提示
+        gpt_response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=gpt_prompt
+        )
+
+    # 从GPT-3的响应中获取生成的描述，并在页面上显示
+    prompt = gpt_response["choices"][0]["message"]["content"]
+    st.write(prompt)
+
+    # 显示一个等待的消息，提示用户正在等待DALL-E的响应
+    with st.spinner("Waiting for DALL-E..."):
+        # 调用OpenAI的API，创建一个图像，提示是GPT-3生成的描述，大小是用户选择的大小
+        dalle_response = openai.Image.create(
+            prompt=prompt,
+            size=size
+        )
+
+    # 从DALL-E的响应中获取生成的图像的URL，并在页面上显示这个图像
+    st.image(dalle_response["data"][0]["url"])
